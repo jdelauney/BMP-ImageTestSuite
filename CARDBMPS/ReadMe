@@ -1,0 +1,138 @@
+A couple of people have asked me for the bitmaps of the cards that I used
+when making SeaHaven Towers for OS/2.  Knowing that a good set of cards 
+can easily take more than 30 hours to make, not having bitmaps available
+can be a serious discouragement for a programmer.  Afterall, sitting for 
+a week in a bitmap editor is not most peoples ideas of fun.  Therefor, I
+have decide to make my bitmaps available for all to use.  The only thing
+that I ask is that if you do use these bitmaps, please send me a copy of 
+the finished product.  I spent a lot of time making these cards and I'd 
+like to see how there being used.  
+
+There are two sizes of cardbitmaps in this archive.  The smaller ones are
+58x79, which is perfect for displaying 10 columns on a 640x480 display.  
+The other set is 82x112, perfect for 12 columns on a 1024x768 display.
+The naming convention is pretty simple.  The first 1-2 letters is the 
+value of the card as follows:
+A  Ace
+2..10 two through 10
+J  Jack
+Q  Queen
+K  King
+The next letter descibes the suit of the card as follows:
+D  diamond
+S  Spade
+C  Club
+H  Heart
+The larger card set also has a b on the end to specify "big." Thus, the king 
+of spades is KS.BMP in the small set and KSB.BMP in the big set.
+
+Other cards that are included are:
+CLUB.BMP and CLUBB.BMP        These are the cards used for the empty ace stacks
+SPADE.BMP and SPADEB.BMP                        "
+HEART.BMP and HEARTB.BMP                        "
+DIAMOND.BMP and DIAMONDB.BMP                    "
+
+MASK.BMP and MASKB.BMP        The mask for punching a whole in the display
+
+TOWERBMP.BMP and TOWERBMB.BMP The empty tower cards. Could be used for a 
+                              card back, if desired.
+
+BLANK.BMP and BLANKB.BMP      Basically just a blank card to create the empty 
+                              column marker.
+
+
+Now, if you're planning to use these cards, you're probably wondering 
+how to display them.  Well, here is the code taken directly from
+SeaHaven Towers for OS/2.  It is all commented pretty well, but if you 
+need help understanding it, contact me at dkulp@ccs.neu.edu or at my
+mail address of 
+
+J. Daniel Kulp  
+2257 Fillmore Avenue
+Deltona, FL  32725
+
+Note, displaying the blank card is a special case and thus has it's own procedure.
+
+VOID DisplayCard(HBM hbm,POINTL aptl[],HPS hps1, HPS hps2)
+/* hbm is the handle to the bitmap of the card to be displayed          */
+/* aptl[] is the coordinates for the copy as follows:                   */
+/*    aptl[0] lower left hand corner of the target hps's                */
+/*    aptl[1] upper right hand corner on the target hps                 */
+/*    aptl[2] lower corner of card bitmap.  usually set to {0,0}        */
+/*    aptl[3] upper corner of card bitmap.  usually set to {cardsizex,cardsizey} */
+/* hps1 and hps2 are the target presentation spaces.  In my application */
+/* hps1 usually refers to the memory presentaion space that just holds  */
+/* a copy of client presentation space.  hps2 is usually the Client     */
+/* presentation space.  By doing the intial draw on the memory hps and  */
+/* then copying it to the screen, this reduces a lot of flicker         */
+/* if hps2 is NULLHANDLE, it will draw to the memory hps, but not to    */
+/* the screen                                                           */
+
+/* In the below code, hpsMemory is the hps which is being used at a     */
+/* bitmap buffer, storeing the bitmaps of the cards.  hbmMask is the    */
+/* handle of the bitmap on that presentation space that refers to the   */
+/* mask that is used to "punch a hole" in the screen before putting the */
+/* card on the screen.  This allows the cards to have rounded corners   */
+{
+POINTL aptl2[3]={0,0, 0,0, 0,0};  
+      /* I happen to like intializing things to zero */
+
+
+      /* Set the source bitmap to the Mask */
+     if(GpiSetBitmap(hpsMemory,hbmMask) == (HBITMAP)BMB_ERROR)
+          DispError(habMain,hwndClient);
+
+     /* Copy the mask to the first presentation space */
+     if(GpiBitBlt(hps1,hpsMemory,3L,aptl,ROP_SRCAND,BBO_IGNORE)
+                     == GPI_ERROR)  DispError(habMain,hwndClient);
+
+      /* Set the source bimtap to the card */
+     if(GpiSetBitmap(hpsMemory,hbm) == (HBITMAP)BMB_ERROR)
+          DispError(habMain,hwndClient);
+
+      /* Copy that to the first presentation space */
+     if(GpiBitBlt(hps1,hpsMemory,3L,aptl,ROP_SRCPAINT,BBO_IGNORE)
+                     == GPI_ERROR)  DispError(habMain,hwndClient);
+
+      /* If there is a second hps, copy the result from the first */
+      /* to the second presentation space                         */
+     if (hps2 != NULLHANDLE) {
+			 aptl2[0]=aptl[0];
+			 aptl2[1]=aptl[1];
+			 aptl2[2]=aptl[0];
+			 GpiBitBlt(hps2,hps1,3L,aptl2,ROP_SRCCOPY,BBO_IGNORE);
+			 }
+}
+
+
+VOID DisplayBlank(PPOINTL aptl,HPS hps1,HPS hps2)
+/* This is very similar to Display Card, but it doesn't need to punch a */
+/* hole first.  Also, if the blank isn't supposed to be displayed, it   */
+/* just erases the area                                                 */
+
+/* EmptyColCard is a Bool variable that determines whether the blank    */
+/*    should be displayed or not                                        */
+/* BackColor stores the background color                                */
+{
+POINTL aptl2[3]={0,0, 0,0, 0,0};
+
+	 if (EmptyColCard) {
+        if(GpiSetBitmap(hpsMemory,hbmBlank) == (HBITMAP)BMB_ERROR)
+              DispError(habMain,hwndClient);
+        if(GpiBitBlt(hps1,hpsMemory,4L,aptl,ROP_SRCAND,BBO_IGNORE)
+					 == GPI_ERROR)  DispError(habMain,hwndClient);
+	 } else {
+		  GpiSetBackColor(hps1,BackColor);
+		  GpiSetColor(hps1,BackColor);
+		  GpiSetCurrentPosition(hps1,aptl);
+		  GpiBox(hps1,DRO_FILL,&aptl[1],0,0);
+	 }
+	 if (hps2 != NULLHANDLE) {
+		  aptl2[0]=aptl[0];
+		  aptl2[1]=aptl[1];
+		  aptl2[2]=aptl[0];
+		  GpiBitBlt(hps2,hps1,3L,aptl2,ROP_SRCCOPY,BBO_IGNORE);
+	 }
+}
+
+
